@@ -1,4 +1,4 @@
-# Expressive Performance Lab
+# [Expressive Performance Lab](https://muk-research.github.io/Klavier/)
 
 A static, local-first web application for live MIDI visualization aimed at expressive-performance pedagogy and artistic research.
 
