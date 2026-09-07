@@ -108,3 +108,9 @@ Canvas visualizations
 ## License
 
 MIT
+
+## Fullscreen and remembered MIDI input
+
+- Use the **Fullscreen** button in the top-right corner, or press **F**, to enter/leave browser fullscreen. Browsers require fullscreen to be initiated by a user gesture, so a normal web page cannot force true fullscreen automatically on page load.
+- The app stores the last selected MIDI input in `localStorage` (ID, name, and manufacturer). On the next connection it restores that device when it is available.
+- If the browser has already retained MIDI permission for the GitHub Pages origin, the app attempts to reconnect automatically on page load without showing a new permission prompt. If the browser does not expose MIDI permission state, **Connect MIDI** remains the fallback.

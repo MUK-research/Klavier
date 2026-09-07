@@ -1,5 +1,7 @@
 const $ = (id) => document.getElementById(id);
 
+const MIDI_PREF_KEY = "epl-midi-input-v1";
+
 const state = {
   midiAccess: null,
   input: null,
@@ -61,7 +63,24 @@ function updateRecordAvailability() {
   $("recordButton").disabled = !(state.workerReady && state.input);
 }
 
-async function connectMidi() {
+function getSavedMidiPreference() {
+  try {
+    return JSON.parse(localStorage.getItem(MIDI_PREF_KEY) || "null");
+  } catch {
+    return null;
+  }
+}
+
+function saveMidiPreference(input) {
+  if (!input) return;
+  localStorage.setItem(MIDI_PREF_KEY, JSON.stringify({
+    id: input.id,
+    name: input.name || "",
+    manufacturer: input.manufacturer || "",
+  }));
+}
+
+async function connectMidi({ quiet = false } = {}) {
   if (!navigator.requestMIDIAccess) {
     $("midiStatus").textContent = "Web MIDI is unavailable in this browser.";
     return;
@@ -70,9 +89,22 @@ async function connectMidi() {
     state.midiAccess = await navigator.requestMIDIAccess({ sysex: false });
     state.midiAccess.onstatechange = refreshMidiInputs;
     refreshMidiInputs();
-    $("midiStatus").textContent = "MIDI access granted";
+    if (!state.input && !quiet) $("midiStatus").textContent = "MIDI access granted";
   } catch (error) {
-    $("midiStatus").textContent = `MIDI access failed: ${error.message}`;
+    if (!quiet) $("midiStatus").textContent = `MIDI access failed: ${error.message}`;
+  }
+}
+
+async function restoreMidiIfPermitted() {
+  // Browsers may remember site-level MIDI permission. If it is already granted,
+  // reconnect without showing a new permission prompt. Unsupported permission
+  // queries simply fall back to the Connect MIDI button.
+  if (!navigator.requestMIDIAccess || !navigator.permissions?.query) return;
+  try {
+    const permission = await navigator.permissions.query({ name: "midi", sysex: false });
+    if (permission.state === "granted") await connectMidi({ quiet: true });
+  } catch {
+    // Firefox/Safari/older Chromium may not expose MIDI through Permissions API.
   }
 }
 
@@ -94,7 +126,13 @@ function refreshMidiInputs() {
     select.appendChild(option);
   });
   const stillPresent = state.input && inputs.some(i => i.id === state.input.id);
-  select.value = stillPresent ? state.input.id : inputs[0].id;
+  const saved = getSavedMidiPreference();
+  const restored = saved && (
+    inputs.find(i => i.id === saved.id) ||
+    inputs.find(i => i.name === saved.name && (!saved.manufacturer || i.manufacturer === saved.manufacturer)) ||
+    inputs.find(i => i.name === saved.name)
+  );
+  select.value = stillPresent ? state.input.id : (restored?.id || inputs[0].id);
   attachInput(select.value);
 }
 
@@ -109,7 +147,8 @@ function attachInput(id) {
   state.input = state.midiAccess?.inputs.get(id) || null;
   if (state.input) {
     state.input.onmidimessage = onMidiMessage;
-    $("midiStatus").textContent = state.input.name || "MIDI connected";
+    saveMidiPreference(state.input);
+    $("midiStatus").textContent = `${state.input.name || "MIDI connected"} · remembered`;
   }
   updateRecordAvailability();
 }
@@ -449,7 +488,26 @@ function updateWindowLabel() {
   $("windowLabel").textContent = `${(settings.windowMs / 1000).toFixed(1)} s`;
 }
 
-$("connectMidi").onclick = connectMidi;
+async function toggleFullscreen() {
+  try {
+    if (!document.fullscreenElement) {
+      await document.documentElement.requestFullscreen();
+    } else {
+      await document.exitFullscreen();
+    }
+  } catch (error) {
+    console.warn("Fullscreen unavailable:", error);
+  }
+}
+
+function updateFullscreenButton() {
+  const active = Boolean(document.fullscreenElement);
+  $("fullscreenButton").textContent = active ? "⛶ Exit fullscreen" : "⛶ Fullscreen";
+  document.body.classList.toggle("is-fullscreen", active);
+  requestAnimationFrame(drawAll);
+}
+
+$("connectMidi").onclick = () => connectMidi();
 $("midiInput").onchange = (e) => attachInput(e.target.value);
 $("recordButton").onclick = toggleRecording;
 $("demoButton").onclick = makeDemo;
@@ -458,10 +516,19 @@ $("saveButton").onclick = () => saveSession(false);
 $("exportJson").onclick = exportJson;
 $("exportCsv").onclick = exportCsv;
 $("windowRange").oninput = () => { updateWindowLabel(); scheduleAnalysis(); };
+$("fullscreenButton").onclick = toggleFullscreen;
+document.addEventListener("fullscreenchange", updateFullscreenButton);
+document.addEventListener("keydown", (event) => {
+  if (event.key.toLowerCase() === "f" && !["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName)) {
+    event.preventDefault();
+    toggleFullscreen();
+  }
+});
 window.addEventListener("resize", drawAll);
 
 updateWindowLabel();
 refreshSessions();
 drawAll();
+restoreMidiIfPermitted();
 
 if (navigator.storage?.persist) navigator.storage.persist().catch(() => {});

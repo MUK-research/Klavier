@@ -36,7 +36,9 @@ h2 { font-size: 1rem; margin: 0; }
 p { line-height: 1.5; }
 .subtitle, .card-heading p { color: var(--muted); margin: 0; }
 .eyebrow { color: var(--accent); font-size: .73rem; letter-spacing: .18em; font-weight: 800; }
+.header-actions { display:flex; align-items:center; gap:12px; flex-wrap:wrap; justify-content:flex-end; }
 .engine-status { display:flex; align-items:center; gap:.55rem; color: var(--muted); white-space:nowrap; }
+.fullscreen-button { white-space:nowrap; }
 .status-dot { width:9px; height:9px; border-radius:50%; background:#777; }
 .status-dot.ready { background: var(--accent); box-shadow: 0 0 12px rgba(167,243,208,.55); }
 .card { background: var(--panel); border:1px solid var(--border); border-radius:14px; }
@@ -83,3 +85,9 @@ footer { padding:24px 0 42px; color:var(--muted); font-size:.8rem; }
   .metrics-grid { grid-template-columns:1fr 1fr; }
   .compact-control { grid-template-columns:1fr; }
 }
+
+
+/* True browser fullscreen is entered via the Fullscreen button / F key. */
+:fullscreen body, body.is-fullscreen { min-height: 100vh; }
+body.is-fullscreen .app-header { padding-top: 20px; }
+body.is-fullscreen footer { padding-bottom: 20px; }
