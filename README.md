@@ -25,7 +25,7 @@ A static, local-first web application for live MIDI visualization aimed at expre
 
 ## Why the terminology is cautious
 
-This prototype deliberately distinguishes measurements from musical interpretation:
+This prototype deliberately distinguishes measurements [(a working list of descriptors)](RESEARCH_NOTES.md) from musical interpretation:
 
 - **Velocity** means MIDI key velocity, not acoustic loudness.
 - **Pace** is a score-free proxy derived from inter-onset timing. In polyphonic music it is not equivalent to a definitive beat-tempo estimate.
