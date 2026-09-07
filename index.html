@@ -1,0 +1,109 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta name="description" content="Browser-based MIDI visualization for expressive performance pedagogy and artistic research." />
+  <title>Expressive Performance Lab</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body>
+  <header class="app-header">
+    <div>
+      <div class="eyebrow">MIDI · PYTHON · LOCAL-FIRST</div>
+      <h1>Expressive Performance Lab</h1>
+      <p class="subtitle">Explore timing, dynamics and articulation as evolving performance gestures.</p>
+    </div>
+    <div class="engine-status">
+      <span class="status-dot" id="pythonDot"></span>
+      <span id="pythonStatus">Loading Python…</span>
+    </div>
+  </header>
+
+  <main>
+    <section class="toolbar card">
+      <div class="control-group device-group">
+        <button id="connectMidi" class="primary">Connect MIDI</button>
+        <select id="midiInput" disabled aria-label="MIDI input">
+          <option>No MIDI inputs</option>
+        </select>
+        <span id="midiStatus" class="muted">Not connected</span>
+      </div>
+      <div class="control-group record-group">
+        <button id="recordButton" class="record" disabled>● Record</button>
+        <button id="demoButton">Demo performance</button>
+        <button id="clearButton">Clear</button>
+        <span id="clock">00:00.0</span>
+      </div>
+    </section>
+
+    <section class="metrics-grid">
+      <article class="metric card"><span>Velocity</span><strong id="liveVelocity">—</strong><small>MIDI 1–127</small></article>
+      <article class="metric card"><span>Pace</span><strong id="livePace">—</strong><small>BPM-like onset proxy</small></article>
+      <article class="metric card"><span>Articulation</span><strong id="liveArticulation">—</strong><small>&lt;1 gap · &gt;1 overlap</small></article>
+      <article class="metric card"><span>Density</span><strong id="liveDensity">—</strong><small>notes / second</small></article>
+    </section>
+
+    <section class="viz-grid">
+      <article class="card timeline-card">
+        <div class="card-heading">
+          <div>
+            <h2>Expressive timeline</h2>
+            <p>Local descriptors computed in Python from the raw MIDI stream.</p>
+          </div>
+          <label class="compact-control">Smoothing
+            <input id="windowRange" type="range" min="600" max="5000" value="1800" step="100" />
+            <output id="windowLabel">1.8 s</output>
+          </label>
+        </div>
+        <canvas id="timeline" width="1200" height="520"></canvas>
+        <div class="legend">
+          <span><i class="swatch velocity"></i>velocity</span>
+          <span><i class="swatch pace"></i>pace</span>
+          <span><i class="swatch articulation"></i>articulation</span>
+          <span><i class="swatch density"></i>density</span>
+        </div>
+      </article>
+
+      <article class="card worm-card">
+        <div class="card-heading">
+          <div>
+            <h2>Performance Worm</h2>
+            <p>Trajectory through local pace × dynamics space.</p>
+          </div>
+        </div>
+        <canvas id="worm" width="620" height="520"></canvas>
+        <div class="axis-note"><span>← slower</span><span>faster →</span></div>
+      </article>
+    </section>
+
+    <section class="lower-grid">
+      <article class="card">
+        <div class="card-heading"><div><h2>Session</h2><p>The original MIDI events are always preserved; recordings auto-save when stopped.</p></div></div>
+        <div class="session-form">
+          <label>Title <input id="sessionTitle" value="Untitled performance" /></label>
+          <div class="button-row">
+            <button id="saveButton" disabled>Save now</button>
+            <button id="exportJson" disabled>Export JSON</button>
+            <button id="exportCsv" disabled>Export CSV</button>
+          </div>
+        </div>
+        <p class="privacy">Saved sessions stay in this browser's IndexedDB. Nothing is uploaded to a server.</p>
+      </article>
+
+      <article class="card">
+        <div class="card-heading"><div><h2>Previous sessions</h2><p>Click a session to reopen its captured performance.</p></div></div>
+        <div id="sessionList" class="session-list"><span class="muted">No saved sessions yet.</span></div>
+      </article>
+    </section>
+
+    <details class="card research-note">
+      <summary>About the descriptors</summary>
+      <p><strong>Velocity</strong> is MIDI key velocity, not acoustic loudness. <strong>Pace</strong> is a score-free proxy obtained from the median interval between distinct onset groups, so it should not be interpreted as a definitive beat-tracking estimate. <strong>Articulation</strong> is a score-free duration/next-attack ratio. These intentionally remain interpretable measurements rather than a single judgement of “good phrasing.”</p>
+    </details>
+  </main>
+
+  <footer>Expressive Performance Lab · v0.1 · local-first research prototype</footer>
+  <script type="module" src="./app.js"></script>
+</body>
+</html>
