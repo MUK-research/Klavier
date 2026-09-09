@@ -115,6 +115,12 @@ MIT
 - The app stores the last selected MIDI input in `localStorage` (ID, name, and manufacturer). On the next connection it restores that device when it is available.
 - If the browser has already retained MIDI permission for the GitHub Pages origin, the app attempts to reconnect automatically on page load without showing a new permission prompt. If the browser does not expose MIDI permission state, **Connect MIDI** remains the fallback.
 
+## Performance Research Lab portal
+
+Expressive Performance Lab is the fourth project in the [MUK Performance Research Lab portal](https://muk-research.github.io/PORTAL/#projects), after PianoRules, Tutor and Tesserakt 2.0.
+
+Its [project-owned presentation](portal/README.md) contains the manifest, SVG thumbnail and a silent interactive [phrase-and-Worm sketch](https://muk-research.github.io/Klavier/portal/). Edit `portal/metadata.json` to update its description, credits or links centrally; no duplicate content is stored in PORTAL. The sketch is explicitly illustrative and never requests MIDI access. The full app, saved sessions, fullscreen and remembered MIDI settings are unchanged.
+
 ---
 
 ## 📝 [To-Do](https://trello.com/c/YmjlhEVm/75-sticken-performancelab)

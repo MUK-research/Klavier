@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="dark">
+<title>Expressive Performance Lab — a phrase, in motion</title>
+<style>
+:root{color-scheme:dark;--bg:#141b16;--ink:#f1f0e9;--muted:#a4aba5;--line:#354039;--green:#c2ebaa;--blue:#70bfff;--red:#ff5768;font-family:Arial,Helvetica,sans-serif}
+*{box-sizing:border-box}body{margin:0;padding:17px;background:var(--bg);color:var(--ink)}header{display:flex;justify-content:space-between;gap:10px;font:9px 'Courier New',monospace;letter-spacing:.08em;color:var(--muted)}header span:last-child{color:var(--green);white-space:nowrap}h1{font-size:clamp(23px,5.8vw,32px);font-weight:400;letter-spacing:-.045em;line-height:1.1;margin:15px 0 8px}h1 em{font-family:Georgia,serif;color:var(--green);font-weight:400}.intro{color:var(--muted);font-size:11px;line-height:1.5;margin:0;max-width:55ch}figure{margin:12px 0 9px}canvas{display:block;width:100%;height:174px}.controls{display:grid;grid-template-columns:1fr 1fr;gap:16px;padding-top:12px;border-top:1px solid var(--line)}label{display:block;min-width:0;font-size:11px}label>span{display:flex;justify-content:space-between;gap:8px}output{font:10px 'Courier New',monospace;color:var(--green)}label:last-child output{color:var(--blue)}input{display:block;width:100%;height:27px;margin:4px 0 0;accent-color:var(--green);cursor:pointer}#sway{accent-color:var(--blue)}footer{display:flex;flex-wrap:wrap;justify-content:space-between;align-items:center;gap:8px;margin-top:9px}button{font:11px Arial,sans-serif;color:var(--ink);border:1px solid var(--line);background:transparent;padding:8px 10px;border-radius:4px;cursor:pointer;min-height:32px}button:hover{border-color:var(--muted)}button[aria-pressed=true].preset{color:var(--green);border-color:#73846d;background:#c2ebaa0a}button:focus-visible,input:focus-visible,a:focus-visible{outline:2px solid var(--green);outline-offset:3px}.presets{display:flex;gap:5px}.note{margin:12px 0 0;font-size:10px;line-height:1.6;color:var(--muted)}.note a{color:var(--green);text-underline-offset:3px}.sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}@media(max-width:330px){body{padding:13px}header{font-size:8px}.controls{gap:12px}button{padding:8px}.intro{font-size:10px}}
+</style>
+</head>
+<body>
+<header><span>EXPRESSIVE PERFORMANCE LAB</span><span>VISUAL STUDY</span></header>
+<h1>A phrase, <em>in motion.</em></h1>
+<p class="intro">Shape the gesture. See its curves unfold, and its Performance Worm trace a path.</p>
+<figure>
+<canvas id="gesture" aria-hidden="true"></canvas>
+<figcaption class="sr-only">Illustrative MIDI velocity, onset pace and articulation curves on the left. On the right, a Performance Worm plots onset pace horizontally against velocity vertically. These are synthetic shapes, not recorded measurements.</figcaption>
+</figure>
+<div class="controls">
+<label for="arc"><span>Dynamic arc <output id="arc-value" for="arc">70%</output></span><input id="arc" type="range" min="0" max="100" step="1" value="70"></label>
+<label for="sway"><span>Timing sway <output id="sway-value" for="sway">55%</output></span><input id="sway" type="range" min="0" max="100" step="1" value="55"></label>
+</div>
+<footer>
+<div class="presets" role="group" aria-label="Illustrative phrase shapes">
+<button class="preset" type="button" data-preset="even" aria-pressed="false">Even</button>
+<button class="preset" type="button" data-preset="arch" aria-pressed="true">Arch</button>
+<button class="preset" type="button" data-preset="linger" aria-pressed="false">Linger</button>
+</div>
+<button id="motion" type="button" aria-pressed="false">Enable motion</button>
+</footer>
+<p class="note">Illustrative shapes, not captured MIDI. Velocity is not loudness; onset pace is not beat tempo.<span id="standalone-link" hidden> <a href="../">Open the full MIDI app ↗</a></span></p>
+<noscript><p class="note">This interactive sketch needs JavaScript. The full MIDI app is available at the project root.</p></noscript>
+<script>
+'use strict';
+// Self-contained presentation only: no imports, storage, network, MIDI or audio.
+const params=new URLSearchParams(location.search), token=params.get('prlToken');
+const embedded=window.parent!==window;
+const canvas=document.getElementById('gesture'), ctx=canvas.getContext('2d');
+const arc=document.getElementById('arc'), sway=document.getElementById('sway');
+const motionButton=document.getElementById('motion');
+const reduced=matchMedia('(prefers-reduced-motion: reduce)');
+const presets={even:[0,0],arch:[70,55],linger:[90,95]};
+let width=300, position=.36, raf=0, last=0, inView=true;
+let localMotion=!reduced.matches, parentActive=params.get('motion')!=='off', disposed=false;
+const H=174, tau=Math.PI*2, colors=['#c2ebaa','#70bfff','#ff5768'];
+const clamp=(n,a,b)=>Math.max(a,Math.min(b,n));
+function sample(u){
+  const a=Number(arc.value)/100, s=Number(sway.value)/100;
+  // Normalized, periodic illustrative contours; NOT the app's analysis algorithm.
+  return [.27+.53*a*(1-Math.cos(tau*u))/2,
+    .5+s*(.25*Math.sin(tau*u)+.08*Math.sin(2*tau*u)),
+    .52+.11*a*Math.sin(tau*u-.7)+.08*s*Math.sin(2*tau*u)];
+}
+function text(str,x,y,color='#a4aba5',align='left'){
+  ctx.fillStyle=color;ctx.textAlign=align;ctx.font="9px 'Courier New',monospace";ctx.fillText(str,x,y);
+}
+function dot(x,y,r,color){ctx.fillStyle=color;ctx.beginPath();ctx.arc(x,y,r,0,tau);ctx.fill();}
+function draw(){
+  if(!ctx||disposed)return;
+  ctx.clearRect(0,0,width,H);
+  const x0=3, tw=Math.max(80,width*.55-9), wx=width*.65, ww=Math.max(45,width-wx-7);
+  const top=27, wh=117;
+  const point=u=>{const v=sample(u);return [wx+clamp((v[1]-.15)/.70,0,1)*ww,top+(1-clamp((v[0]-.18)/.68,0,1))*wh];};
+  text('TIME →',x0,11);text('WORM',wx,11);
+  ctx.strokeStyle='#354039';ctx.lineWidth=1;ctx.beginPath();
+  ctx.moveTo(width*.60,19);ctx.lineTo(width*.60,155);
+  ctx.moveTo(wx,top);ctx.lineTo(wx,top+wh);ctx.lineTo(wx+ww,top+wh);ctx.stroke();
+  text('velocity ↑',wx+3,top+8);text('pace →',wx+ww,163,'#a4aba5','right');
+  const labels=['VELOCITY','PACE','ARTIC.'];
+  for(let j=0;j<3;j++){
+    const row=27+j*44;
+    text(labels[j],x0,row,colors[j]);
+    ctx.strokeStyle='#354039';ctx.lineWidth=.7;ctx.beginPath();ctx.moveTo(x0,row+29);ctx.lineTo(x0+tw,row+29);ctx.stroke();
+    ctx.strokeStyle=colors[j];ctx.lineWidth=1.7;ctx.beginPath();
+    for(let i=0;i<=100;i++){const u=i/100,x=x0+tw*u,y=row+30-sample(u)[j]*27;i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.stroke();
+    dot(x0+tw*position,row+30-sample(position)[j]*27,2.7,colors[j]);
+  }
+  ctx.strokeStyle='#f1f0e933';ctx.lineWidth=1;ctx.beginPath();ctx.moveTo(x0+tw*position,30);ctx.lineTo(x0+tw*position,147);ctx.stroke();
+  // Ghost of the entire gesture, plus a fading trail ending at the moving head.
+  ctx.strokeStyle='#70bfff33';ctx.lineWidth=1;ctx.beginPath();
+  for(let i=0;i<=120;i++){const [x,y]=point(i/120);i?ctx.lineTo(x,y):ctx.moveTo(x,y);}ctx.stroke();
+  let previous=point((position-.58+1)%1);
+  for(let i=1;i<=80;i++){
+    const u=(position-.58+.58*i/80+1)%1, current=point(u);
+    ctx.globalAlpha=.07+.93*i/80;ctx.strokeStyle=i<42?colors[1]:colors[0];ctx.lineWidth=1+2*i/80;
+    ctx.beginPath();ctx.moveTo(...previous);ctx.lineTo(...current);ctx.stroke();previous=current;
+  }
+  ctx.globalAlpha=1;const [x,y]=point(position);dot(x,y,8,'#c2ebaa18');dot(x,y,3.6,colors[0]);
+}
+function running(){return !disposed&&localMotion&&parentActive&&inView&&!document.hidden&&Boolean(ctx);}
+function frame(now){
+  raf=0;if(!running())return;
+  if(!last){last=now;}
+  if(now-last>=40){position=(position+Math.min(now-last,100)/10500)%1;last=now;draw();}
+  raf=requestAnimationFrame(frame);
+}
+function sync(){
+  cancelAnimationFrame(raf);raf=0;last=0;
+  const active=running();
+  document.body.dataset.running=String(active);
+  motionButton.textContent=localMotion?'Pause motion':'Enable motion';
+  motionButton.setAttribute('aria-pressed',String(localMotion));
+  draw();if(active)raf=requestAnimationFrame(frame);
+}
+function send(type,extra={}){if(embedded&&token&&!disposed)parent.postMessage({type,token,...extra},'*');}
+function resize(){
+  width=Math.max(1,canvas.getBoundingClientRect().width);
+  const dpr=Math.min(devicePixelRatio||1,1.5);
+  canvas.width=Math.round(width*dpr);canvas.height=Math.round(H*dpr);
+  if(ctx)ctx.setTransform(dpr,0,0,dpr,0,0);
+  draw();send('prl:resize',{height:Math.ceil(document.body.getBoundingClientRect().height)});
+}
+function updateControls(preset=null){
+  document.getElementById('arc-value').textContent=arc.value+'%';
+  document.getElementById('sway-value').textContent=sway.value+'%';
+  document.querySelectorAll('[data-preset]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.preset===preset)));
+  draw();
+}
+arc.addEventListener('input',()=>updateControls());sway.addEventListener('input',()=>updateControls());
+document.querySelectorAll('[data-preset]').forEach(b=>b.addEventListener('click',()=>{
+  [arc.value,sway.value]=presets[b.dataset.preset];updateControls(b.dataset.preset);
+}));
+motionButton.addEventListener('click',()=>{localMotion=!localMotion;sync();});
+window.addEventListener('message',event=>{
+  if(!embedded||!token||event.source!==parent||event.data?.token!==token||event.data.type!=='prl:visibility'||typeof event.data.active!=='boolean')return;
+  parentActive=event.data.active;sync();
+});
+document.addEventListener('visibilitychange',sync);
+reduced.addEventListener('change',event=>{if(event.matches){localMotion=false;sync();}});
+const sizeObserver=new ResizeObserver(resize);sizeObserver.observe(document.body);
+const visibilityObserver=new IntersectionObserver(entries=>{inView=entries[0].isIntersecting;sync();});visibilityObserver.observe(canvas);
+window.addEventListener('pagehide',()=>{disposed=true;cancelAnimationFrame(raf);sizeObserver.disconnect();visibilityObserver.disconnect();});
+window.addEventListener('pageshow',event=>{if(event.persisted){disposed=false;sizeObserver.observe(document.body);visibilityObserver.observe(canvas);resize();sync();send('prl:ready');}});
+if(!embedded)document.getElementById('standalone-link').hidden=false;
+resize();sync();send('prl:ready');
+</script>
+</body>
+</html>
